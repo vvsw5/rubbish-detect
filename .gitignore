@@ -1,0 +1,9 @@
+frontend/node_modules/
+frontend/dist/
+backend/__pycache__/
+backend/app/__pycache__/
+.idea/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store

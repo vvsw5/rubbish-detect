@@ -1,0 +1,32 @@
+{
+  "battery": {
+    "item_name": "废旧电池",
+    "category": "有害垃圾",
+    "suggestion": "请单独投放到有害垃圾回收点。"
+  },
+  "can": {
+    "item_name": "易拉罐",
+    "category": "可回收物",
+    "suggestion": "清空内容物后投放到可回收物。"
+  },
+  "plastic bottle": {
+    "item_name": "塑料瓶",
+    "category": "可回收物",
+    "suggestion": "清洗后压扁投放，便于回收处理。"
+  },
+  "banana peel": {
+    "item_name": "香蕉皮",
+    "category": "厨余垃圾",
+    "suggestion": "请投放到厨余垃圾桶。"
+  },
+  "vegetable": {
+    "item_name": "菜叶",
+    "category": "厨余垃圾",
+    "suggestion": "沥干水分后投入厨余垃圾桶。"
+  },
+  "napkin": {
+    "item_name": "纸巾",
+    "category": "其他垃圾",
+    "suggestion": "受污染纸巾不可回收，请投入其他垃圾。"
+  }
+}
