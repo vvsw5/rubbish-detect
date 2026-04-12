@@ -2,6 +2,11 @@ frontend/node_modules/
 frontend/dist/
 backend/__pycache__/
 backend/app/__pycache__/
+backend/data/
+backend/dataset_classify/
+backend/runs/
+backend/scripts/__pycache__/
+backend/yolov8*.pt
 .idea/
 *.pyc
 *.pyo

@@ -4,11 +4,19 @@ services:
     runtime: python
     plan: free
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-yolo.txt
     startCommand: uvicorn app.server_clean:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: MODEL_PROVIDER
-        value: mock
+        value: yolo
+      - key: MODEL_PATH
+        value: weights/best.pt
+      - key: LABEL_MAPPING_PATH
+        value: label_mapping.json
+      - key: YOLO_CONF
+        value: "0.25"
+      - key: YOLO_IMGSZ
+        value: "640"
       - key: PYTHON_VERSION
         value: 3.12.13

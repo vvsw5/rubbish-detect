@@ -1,0 +1,52 @@
+{
+  "battery": {
+    "item_name": "废旧电池",
+    "category": "有害垃圾",
+    "suggestion": "请单独投放到有害垃圾回收点。"
+  },
+  "can": {
+    "item_name": "易拉罐",
+    "category": "可回收物",
+    "suggestion": "请清空内容物后投入可回收物。"
+  },
+  "carton": {
+    "item_name": "纸盒",
+    "category": "可回收物",
+    "suggestion": "压平整理后投放到可回收物。"
+  },
+  "cigarette butt": {
+    "item_name": "烟头",
+    "category": "其他垃圾",
+    "suggestion": "请确认熄灭后再投入其他垃圾。"
+  },
+  "expired medicine": {
+    "item_name": "过期药品",
+    "category": "有害垃圾",
+    "suggestion": "请密封后投放到有害垃圾回收渠道。"
+  },
+  "glass bottle": {
+    "item_name": "玻璃瓶",
+    "category": "可回收物",
+    "suggestion": "注意轻放，避免破损伤人。"
+  },
+  "plastic": {
+    "item_name": "塑料制品",
+    "category": "可回收物",
+    "suggestion": "请尽量清洁后投入可回收物。"
+  },
+  "plastic bottle": {
+    "item_name": "塑料瓶",
+    "category": "可回收物",
+    "suggestion": "清洗后压扁投放，便于回收处理。"
+  },
+  "shoes": {
+    "item_name": "旧鞋",
+    "category": "可回收物",
+    "suggestion": "如可再利用建议捐赠，否则整理后投入可回收物。"
+  },
+  "vegetable leaf": {
+    "item_name": "菜叶",
+    "category": "厨余垃圾",
+    "suggestion": "建议沥干水分后投放，减少后续处理负担。"
+  }
+}

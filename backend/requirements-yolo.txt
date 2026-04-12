@@ -1,2 +1,3 @@
+-r requirements.txt
 ultralytics
 pillow==11.3.0
