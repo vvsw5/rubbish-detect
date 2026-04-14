@@ -139,6 +139,36 @@ const categoryMeta = {
   }
 };
 
+const loadingStageMeta = {
+  idle: {
+    eyebrow: "Ready",
+    title: "等待新的识别请求",
+    description: "选择图片或抓拍之后，系统会在这里展示当前进度。"
+  },
+  optimizing: {
+    eyebrow: "Preparing",
+    title: "正在压缩并整理图片",
+    description: "先把过大的图片处理到更适合识别的尺寸，减少上传和解码时间。"
+  },
+  uploading: {
+    eyebrow: "Uploading",
+    title: "正在发送到识别服务",
+    description: "图片已经准备好，正在传给后端服务。"
+  },
+  analyzing: {
+    eyebrow: "Analyzing",
+    title: "模型正在分析图像",
+    description: "系统正在提取图像特征并组织这次分类结果。"
+  },
+  warming: {
+    eyebrow: "Waking",
+    title: "正在连接在线模型服务",
+    description: "如果这是服务休眠后的第一次识别，这一步会比平时稍慢一点。"
+  }
+};
+
+const loadingStageOrder = ["optimizing", "uploading", "analyzing", "warming"];
+
 const quickNotes = [
   {
     title: "流程是完整的",
@@ -183,9 +213,11 @@ function AppPortfolio() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const loadingTimersRef = useRef([]);
   const [previewUrl, setPreviewUrl] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState("idle");
   const [error, setError] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const [serviceMeta, setServiceMeta] = useState(null);
@@ -210,6 +242,15 @@ function AppPortfolio() {
   useEffect(() => {
     return () => {
       releaseCamera(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined") {
+        loadingTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      }
+      loadingTimersRef.current = [];
     };
   }, []);
 
@@ -317,10 +358,30 @@ function AppPortfolio() {
     );
   }
 
+  function clearLoadingTimers() {
+    if (typeof window !== "undefined") {
+      loadingTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    }
+    loadingTimersRef.current = [];
+  }
+
   async function sendFile(file) {
     setLoading(true);
+    setLoadingStage("uploading");
     setError("");
     setResult(null);
+    clearLoadingTimers();
+
+    if (typeof window !== "undefined") {
+      loadingTimersRef.current = [
+        window.setTimeout(() => {
+          setLoadingStage("analyzing");
+        }, 320),
+        window.setTimeout(() => {
+          setLoadingStage("warming");
+        }, 2800)
+      ];
+    }
 
     try {
       const formData = new FormData();
@@ -343,17 +404,23 @@ function AppPortfolio() {
     } catch (requestError) {
       setError(requestError.message || "请求异常");
     } finally {
+      clearLoadingTimers();
       setLoading(false);
+      setLoadingStage("idle");
     }
   }
 
   async function handleSelectedFile(file, sourceLabel) {
+    recordCaptureMeta(file, sourceLabel);
+    setLoading(true);
+    setLoadingStage("optimizing");
+    setError("");
+    setResult(null);
+
     try {
       const optimizedFile = await optimizeImageFile(file);
-      recordCaptureMeta(optimizedFile, sourceLabel);
       await sendFile(optimizedFile);
     } catch {
-      recordCaptureMeta(file, sourceLabel);
       await sendFile(file);
     }
   }
@@ -455,12 +522,15 @@ function AppPortfolio() {
     });
 
     recordCaptureMeta(imageFile, "摄像头抓拍");
-    void sendFile(imageFile);
+    return void handleSelectedFile(imageFile, "摄像头抓拍");
   }
 
   const resultStyle = result ? categoryMeta[result.category] || categoryMeta.其他垃圾 : null;
   const confidencePercent = result ? Math.round(result.confidence * 100) : 0;
   const previewStateClass = loading ? "processing" : result ? "resolved" : "";
+  const currentLoadingMeta = loadingStageMeta[loadingStage] || loadingStageMeta.idle;
+  const visibleLoadingStages =
+    loadingStage === "warming" ? loadingStageOrder : loadingStageOrder.slice(0, 3);
   const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
   const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
   const accessHint = currentHost
@@ -656,7 +726,26 @@ function AppPortfolio() {
             <div className={`preview-stage ${previewStateClass}`}>
               <img className="preview-image" src={previewUrl} alt="待识别图像" />
               {loading && (
-                <div className="processing-hud">
+                <div className="processing-hud" data-stage={loadingStage} data-eyebrow={currentLoadingMeta.eyebrow}>
+                  <div className="loading-summary">
+                    <span>{currentLoadingMeta.eyebrow}</span>
+                    <strong>{currentLoadingMeta.title}</strong>
+                    <p>{currentLoadingMeta.description}</p>
+                  </div>
+                  <div className="stage-pill-row">
+                    {visibleLoadingStages.map((stage) => {
+                      const stageIndex = loadingStageOrder.indexOf(stage);
+                      const currentIndex = loadingStageOrder.indexOf(loadingStage);
+                      const status =
+                        currentIndex > stageIndex ? "done" : currentIndex === stageIndex ? "active" : "";
+
+                      return (
+                        <span key={stage} className={`stage-pill ${status}`.trim()}>
+                          {loadingStageMeta[stage].eyebrow}
+                        </span>
+                      );
+                    })}
+                  </div>
                   <span>正在分析图像</span>
                   <strong>请稍候，系统正在提取分类结果</strong>
                 </div>
@@ -688,13 +777,32 @@ function AppPortfolio() {
           </div>
 
           {loading && (
-            <div className="placeholder-panel loading-panel">
-              <div className="placeholder-art">
+            <div className="placeholder-panel loading-panel" data-stage={loadingStage}>
+              <div className="placeholder-art loading-art">
+                <div className="loading-summary centered">
+                  <span>{currentLoadingMeta.eyebrow}</span>
+                  <strong>{currentLoadingMeta.title}</strong>
+                  <p>{currentLoadingMeta.description}</p>
+                </div>
                 <div className="loading-bars" aria-hidden="true">
                   <span />
                   <span />
                   <span />
                   <span />
+                </div>
+                <div className="stage-pill-row center">
+                  {visibleLoadingStages.map((stage) => {
+                    const stageIndex = loadingStageOrder.indexOf(stage);
+                    const currentIndex = loadingStageOrder.indexOf(loadingStage);
+                    const status =
+                      currentIndex > stageIndex ? "done" : currentIndex === stageIndex ? "active" : "";
+
+                    return (
+                      <span key={stage} className={`stage-pill ${status}`.trim()}>
+                        {loadingStageMeta[stage].eyebrow}
+                      </span>
+                    );
+                  })}
                 </div>
                 <strong>正在识别中</strong>
                 <p>系统正在提取图像特征，并组织本次分类结果。</p>

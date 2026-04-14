@@ -1240,13 +1240,17 @@ button:hover:not(:disabled) {
   position: absolute;
   inset: 16px 16px auto 16px;
   display: grid;
-  gap: 4px;
+  gap: 8px;
   padding: 14px 16px;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(17, 33, 52, 0.12), rgba(17, 33, 52, 0.62));
   color: #f6fbff;
   backdrop-filter: blur(10px);
   z-index: 2;
+}
+
+.processing-hud[data-stage="warming"] {
+  background: linear-gradient(180deg, rgba(17, 33, 52, 0.16), rgba(13, 60, 82, 0.74));
 }
 
 .processing-hud span,
@@ -1259,6 +1263,116 @@ button:hover:not(:disabled) {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(246, 251, 255, 0.72);
+}
+
+.processing-hud > span,
+.processing-hud > strong,
+.loading-art > strong,
+.loading-art > p {
+  display: none;
+}
+
+.loading-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.loading-summary.centered {
+  justify-items: center;
+  text-align: center;
+}
+
+.loading-summary span,
+.loading-summary strong,
+.loading-summary p,
+.stage-pill {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.loading-summary span {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(246, 251, 255, 0.72);
+}
+
+.loading-summary strong {
+  color: #f6fbff;
+  font-size: 20px;
+}
+
+.loading-summary p {
+  margin: 0;
+  color: rgba(246, 251, 255, 0.8);
+  line-height: 1.6;
+}
+
+.loading-panel .loading-summary span {
+  color: #4d6b70;
+}
+
+.loading-panel .loading-summary strong {
+  color: #17324a;
+}
+
+.loading-panel .loading-summary p {
+  color: #597082;
+}
+
+.stage-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stage-pill-row.center {
+  justify-content: center;
+}
+
+.stage-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(246, 251, 255, 0.72);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  transition: transform 0.22s ease, background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+}
+
+.loading-panel .stage-pill {
+  border-color: rgba(17, 33, 52, 0.08);
+  background: rgba(255, 255, 255, 0.46);
+  color: #6e8396;
+}
+
+.stage-pill.active {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.24), rgba(56, 189, 248, 0.22));
+  border-color: rgba(157, 247, 232, 0.48);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.loading-panel .stage-pill.active {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(56, 189, 248, 0.16));
+  border-color: rgba(15, 118, 110, 0.18);
+  color: #184056;
+}
+
+.stage-pill.done {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(246, 251, 255, 0.92);
+}
+
+.loading-panel .stage-pill.done {
+  background: rgba(20, 184, 166, 0.1);
+  border-color: rgba(20, 184, 166, 0.16);
+  color: #17606f;
 }
 
 .placeholder-panel {
@@ -1317,6 +1431,12 @@ button:hover:not(:disabled) {
   background:
     radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 24%),
     linear-gradient(135deg, rgba(236, 248, 246, 0.96), rgba(226, 241, 239, 0.9));
+}
+
+.loading-panel[data-stage="warming"] {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 24%),
+    linear-gradient(135deg, rgba(232, 243, 248, 0.96), rgba(221, 236, 243, 0.9));
 }
 
 .result-empty {
