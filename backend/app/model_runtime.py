@@ -61,15 +61,19 @@ def get_yolo_confidence() -> float:
     return min(max(value, 0.0), 1.0)
 
 
-def get_yolo_image_size() -> int | None:
+def get_default_yolo_image_size(task: str | None = None) -> int:
+    return 224 if (task or "").strip().lower() == "classify" else 640
+
+
+def get_yolo_image_size(task: str | None = None) -> int:
     raw = os.getenv("YOLO_IMGSZ", "").strip()
     if not raw:
-        return None
+        return get_default_yolo_image_size(task)
     try:
         value = int(raw)
     except ValueError:
-        return None
-    return value if value > 0 else None
+        return get_default_yolo_image_size(task)
+    return value if value > 0 else get_default_yolo_image_size(task)
 
 
 def get_yolo_device() -> str | None:
@@ -150,6 +154,7 @@ class YoloRuntime:
         self._image_module = Image
         self._model = YOLO(str(model_path))
         self._label_mapping = load_label_mapping(mapping_path)
+        self._task = str(getattr(self._model, "task", "") or "").strip().lower()
         self.model_path = model_path
         self.mapping_path = mapping_path
         self.model_name = model_path.name
@@ -158,12 +163,12 @@ class YoloRuntime:
         image = self._image_module.open(BytesIO(image_bytes)).convert("RGB")
         predict_options: dict[str, Any] = {
             "verbose": False,
-            "conf": get_yolo_confidence(),
         }
 
-        image_size = get_yolo_image_size()
-        if image_size:
-            predict_options["imgsz"] = image_size
+        if self._task != "classify":
+            predict_options["conf"] = get_yolo_confidence()
+
+        predict_options["imgsz"] = get_yolo_image_size(self._task)
 
         device = get_yolo_device()
         if device:

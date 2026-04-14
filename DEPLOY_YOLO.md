@@ -71,7 +71,7 @@ MODEL_PROVIDER=yolo
 MODEL_PATH=weights/best.pt
 LABEL_MAPPING_PATH=label_mapping.json
 YOLO_CONF=0.25
-YOLO_IMGSZ=640
+YOLO_IMGSZ=224
 PYTHON_VERSION=3.12.13
 FRONTEND_ORIGINS=https://rubbish-detect-frontend.vercel.app
 ```

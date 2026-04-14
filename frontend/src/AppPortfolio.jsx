@@ -16,9 +16,104 @@ function resolveApiBaseUrl() {
 const API_BASE_URL = resolveApiBaseUrl();
 const API_URL = `${API_BASE_URL}/api/classify`;
 const META_URL = `${API_BASE_URL}/api/meta`;
+const MAX_UPLOAD_DIMENSION = 960;
+const MAX_CAMERA_DIMENSION = 960;
+const OPTIMIZED_JPEG_QUALITY = 0.82;
+const LARGE_IMAGE_THRESHOLD = 900 * 1024;
 
 function isLoopbackHost(hostname) {
   return hostname === "127.0.0.1" || hostname === "localhost";
+}
+
+function getScaledSize(width, height, maxDimension) {
+  const longestSide = Math.max(width, height);
+  if (!longestSide || longestSide <= maxDimension) {
+    return { width, height };
+  }
+
+  const scale = maxDimension / longestSide;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale))
+  };
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image."));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Failed to export image."));
+        return;
+      }
+      resolve(blob);
+    }, type, quality);
+  });
+}
+
+async function optimizeImageFile(file, options = {}) {
+  if (!file.type.startsWith("image/") || typeof document === "undefined") {
+    return file;
+  }
+
+  const {
+    maxDimension = MAX_UPLOAD_DIMENSION,
+    quality = OPTIMIZED_JPEG_QUALITY
+  } = options;
+
+  const image = await loadImageElement(file);
+  const scaledSize = getScaledSize(
+    image.naturalWidth,
+    image.naturalHeight,
+    maxDimension
+  );
+  const shouldResize =
+    scaledSize.width !== image.naturalWidth ||
+    scaledSize.height !== image.naturalHeight;
+  const shouldCompress =
+    shouldResize ||
+    file.size > LARGE_IMAGE_THRESHOLD ||
+    file.type !== "image/jpeg";
+
+  if (!shouldCompress) {
+    return file;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = scaledSize.width;
+  canvas.height = scaledSize.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return file;
+  }
+
+  context.drawImage(image, 0, 0, scaledSize.width, scaledSize.height);
+  const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+  const baseName = file.name.replace(/\.[^.]+$/, "") || "upload";
+
+  return new File([blob], `${baseName}-optimized.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now()
+  });
 }
 
 const categoryMeta = {
@@ -252,14 +347,24 @@ function AppPortfolio() {
     }
   }
 
+  async function handleSelectedFile(file, sourceLabel) {
+    try {
+      const optimizedFile = await optimizeImageFile(file);
+      recordCaptureMeta(optimizedFile, sourceLabel);
+      await sendFile(optimizedFile);
+    } catch {
+      recordCaptureMeta(file, sourceLabel);
+      await sendFile(file);
+    }
+  }
+
   function handleFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    recordCaptureMeta(file, "图片上传");
-    void sendFile(file);
+    return void handleSelectedFile(file, "图片上传");
   }
 
   function handleDragOver(event) {
@@ -279,8 +384,8 @@ function AppPortfolio() {
     if (!file) {
       return;
     }
-    recordCaptureMeta(file, "拖拽上传");
-    void sendFile(file);
+
+    return void handleSelectedFile(file, "拖拽上传");
   }
 
   async function openCamera() {
@@ -324,8 +429,9 @@ function AppPortfolio() {
       return;
     }
 
-    canvas.width = width;
-    canvas.height = height;
+    const scaledSize = getScaledSize(width, height, MAX_CAMERA_DIMENSION);
+    canvas.width = scaledSize.width;
+    canvas.height = scaledSize.height;
 
     const context = canvas.getContext("2d");
     if (!context) {
@@ -333,10 +439,10 @@ function AppPortfolio() {
       return;
     }
 
-    context.drawImage(video, 0, 0, width, height);
+    context.drawImage(video, 0, 0, scaledSize.width, scaledSize.height);
 
     const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.95)
+      canvas.toBlob(resolve, "image/jpeg", OPTIMIZED_JPEG_QUALITY)
     );
 
     if (!blob) {
