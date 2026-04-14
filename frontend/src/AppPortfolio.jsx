@@ -141,61 +141,79 @@ const categoryMeta = {
 
 const loadingStageMeta = {
   idle: {
-    eyebrow: "Ready",
+    eyebrow: "待命",
     title: "等待新的识别请求",
-    description: "选择图片或抓拍之后，系统会在这里展示当前进度。"
+    description: "选择一张图片，或者打开摄像头抓拍，结果会在这里更新。"
   },
   optimizing: {
-    eyebrow: "Preparing",
-    title: "正在压缩并整理图片",
-    description: "先把过大的图片处理到更适合识别的尺寸，减少上传和解码时间。"
+    eyebrow: "整理图片",
+    title: "正在准备图片",
+    description: "系统会先把图片调整到更适合识别的尺寸，让整个过程更顺畅。"
   },
   uploading: {
-    eyebrow: "Uploading",
-    title: "正在发送到识别服务",
-    description: "图片已经准备好，正在传给后端服务。"
+    eyebrow: "发送中",
+    title: "正在提交识别请求",
+    description: "图片已经准备完成，正在发送到后端服务。"
   },
   analyzing: {
-    eyebrow: "Analyzing",
-    title: "模型正在分析图像",
-    description: "系统正在提取图像特征并组织这次分类结果。"
+    eyebrow: "识别中",
+    title: "模型正在判断内容",
+    description: "系统正在提取图像特征，并生成这次识别结果。"
   },
   warming: {
-    eyebrow: "Waking",
-    title: "正在连接在线模型服务",
-    description: "如果这是服务休眠后的第一次识别，这一步会比平时稍慢一点。"
+    eyebrow: "连接中",
+    title: "正在唤醒在线服务",
+    description: "如果这是久未访问后的第一次识别，等待时间会略长一些。"
   }
 };
 
 const loadingStageOrder = ["optimizing", "uploading", "analyzing", "warming"];
 
+const providerLabelMap = {
+  yolo: "YOLO 模型",
+  mock: "演示模式"
+};
+
+const sourceLabelMap = {
+  "yolo-inference": "模型识别",
+  "mock-rule-engine": "演示规则"
+};
+
+function formatProviderLabel(provider) {
+  return providerLabelMap[provider] || provider || "未设置";
+}
+
+function formatSourceLabel(source) {
+  return sourceLabelMap[source] || source || "未知来源";
+}
+
 const quickNotes = [
   {
-    title: "流程是完整的",
-    description: "上传、抓拍、返回结果，这条线现在已经能顺畅演示。"
+    title: "识别链路已打通",
+    description: "上传、抓拍、推理和结果展示已经连成一条完整流程。"
   },
   {
-    title: "摄像头是可控的",
-    description: "可以打开、抓拍、关闭，不会一直占着设备。"
+    title: "摄像头按需启用",
+    description: "需要时打开，不用时关闭，演示过程会轻松很多。"
   },
   {
-    title: "后面还能接着做",
-    description: "等你开始训练模型时，这套前后端还能继续往里接。"
+    title: "页面还能继续扩展",
+    description: "后续替换模型、补充类别或增加历史记录，都可以在这版基础上继续做。"
   }
 ];
 
 const systemBlocks = [
   {
-    title: "界面层",
-    text: "负责接收图片、调起摄像头和展示结果。"
+    title: "交互界面",
+    text: "负责图片输入、摄像头调用和结果展示。"
   },
   {
-    title: "服务层",
-    text: "负责接收请求，统一返回前端需要的数据格式。"
+    title: "识别服务",
+    text: "负责接收请求，并把模型结果整理成统一的数据格式。"
   },
   {
-    title: "模型层",
-    text: "当前先用演示分类器，后面可以替换成 YOLO 或自己的模型。"
+    title: "模型推理",
+    text: "当前已接入 YOLO，后续可以继续替换权重和映射配置。"
   }
 ];
 
@@ -552,7 +570,7 @@ function AppPortfolio() {
           <span className="brand-mark">GC</span>
           <div>
             <strong>垃圾分类实时检测系统</strong>
-            <small>图像识别成果展示页</small>
+            <small>图像识别交互展示</small>
           </div>
         </div>
         <div className="topbar-note">江苏第二师范学院 · 计算机工程学院</div>
@@ -560,26 +578,26 @@ function AppPortfolio() {
 
       <section className="hero-grid">
         <section className="hero-copy reveal reveal-2">
-          <p className="hero-kicker">Waste Sorting Demo</p>
-          <h1>把识别过程，放到眼前。</h1>
+          <p className="hero-kicker">Image-Based Waste Sorting</p>
+          <h1>让识别结果更直观地出现。</h1>
           <p className="hero-description">
-            这版页面更像一块正在工作的展示台。你可以上传图片，也可以临时打开摄像头，
-            结果会直接落到界面里，不用堆很多说明，也能把系统状态讲清楚。
+            上传图片或打开摄像头之后，系统会在同一界面完成预览、识别和结果反馈。
+            页面尽量少讲术语，把重点留给操作过程和最终结果。
           </p>
-          <p className="hero-subline">先把演示做漂亮，再把真实模型接进来。</p>
+          <p className="hero-subline">当前版本已经接入真实模型，可以直接用于成果展示。</p>
 
           <div className="hero-tags">
             <span>图片上传</span>
-            <span>实时取景</span>
-            <span>结果展示</span>
-            <span>后续可接 YOLO</span>
+            <span>摄像头抓拍</span>
+            <span>实时反馈</span>
+            <span>YOLO 推理</span>
           </div>
 
           {serviceMeta && (
             <div className="meta-board">
               <div>
                 <strong>当前模式</strong>
-                <span>{serviceMeta.provider}</span>
+                <span>{formatProviderLabel(serviceMeta.provider)}</span>
               </div>
               <div>
                 <strong>模型名称</strong>
@@ -602,28 +620,28 @@ function AppPortfolio() {
 
         <section className="hero-side reveal reveal-3">
           <div className="hero-panel floating-card">
-            <span className="panel-label">现在能演示什么</span>
-            <h2>上传、取景、识别、落屏</h2>
-            <p>重点不是堆信息，而是让操作和结果都显得自然。</p>
+            <span className="panel-label">当前体验</span>
+            <h2>从输入到结果，一屏完成</h2>
+            <p>把操作、状态和识别结果放在同一个节奏里，展示时更直接，也更好讲清楚。</p>
           </div>
           <div className="hero-orbit-card" aria-hidden="true">
             <div className="orbit-core">
-              <span>Live</span>
+              <span>实时</span>
             </div>
             <div className="orbit-labels">
-              <span>Upload</span>
-              <span>Camera</span>
-              <span>Result</span>
+              <span>上传</span>
+              <span>抓拍</span>
+              <span>结果</span>
             </div>
           </div>
           <div className="hero-mini-grid">
             <div className="hero-mini-card">
               <span className="metric">4 类</span>
-              <p>四类垃圾分类结果已经接通展示逻辑</p>
+              <p>结果会落在可回收物、有害垃圾、厨余垃圾和其他垃圾四类中</p>
             </div>
             <div className="hero-mini-card highlight">
-              <span className="metric">Live</span>
-              <p>现场打开摄像头就能直接做抓拍演示</p>
+              <span className="metric">抓拍</span>
+              <p>现场打开摄像头后，就能立即完成一次识别演示</p>
             </div>
           </div>
         </section>
@@ -656,9 +674,9 @@ function AppPortfolio() {
             onDrop={handleDrop}
           >
             <div className="upload-panel-copy">
-              <em className="upload-badge">Drop / Select</em>
-              <span>上传垃圾图片</span>
-              <small>支持点击选择，也支持把图片直接拖进来。</small>
+              <em className="upload-badge">点击上传 / 拖拽</em>
+              <span>上传待识别图片</span>
+              <small>支持点击选择，也支持直接拖入图片。</small>
             </div>
             <div className="upload-panel-orbit" aria-hidden="true">
               <span />
@@ -671,8 +689,8 @@ function AppPortfolio() {
           <div className="status-ribbon">
             <span className={`signal-dot ${cameraReady ? "live" : ""}`} />
             <div className="status-ribbon-copy">
-              <strong>{cameraReady ? "摄像头已连接" : "当前使用静态图片输入"}</strong>
-              <small>{cameraReady ? "可直接抓拍并实时关闭" : "上传图片或打开摄像头开始演示"}</small>
+              <strong>{cameraReady ? "摄像头已连接" : "当前使用图片输入"}</strong>
+              <small>{cameraReady ? "可以直接抓拍，结束后也能随时关闭" : "上传图片或打开摄像头开始识别"}</small>
             </div>
             <div className={`status-wave ${cameraReady ? "live" : ""}`} aria-hidden="true">
               <span />
@@ -709,7 +727,7 @@ function AppPortfolio() {
             {!cameraReady && (
               <div className="camera-placeholder">
                 <strong>摄像头未开启</strong>
-                <span>打开之后可以直接抓拍，再一键关闭，不会一直占用设备。</span>
+                <span>打开后可以直接抓拍识别，结束后再一键关闭。</span>
               </div>
             )}
             <canvas ref={canvasRef} hidden />
@@ -820,9 +838,9 @@ function AppPortfolio() {
           {!loading && !error && !result && (
             <div className="placeholder-panel result-empty">
               <div className="placeholder-art">
-                <div className="result-empty-badge">Result Pending</div>
-                <strong>结果会在这里出现</strong>
-                <p>识别完成后，分类类别、置信度和投放建议会一起展示出来。</p>
+                <div className="result-empty-badge">等待结果</div>
+                <strong>结果会在这里更新</strong>
+                <p>识别完成后，类别、置信度和投放建议会一起显示。</p>
               </div>
             </div>
           )}
@@ -845,7 +863,7 @@ function AppPortfolio() {
               </div>
               <div className="analysis-chip-row">
                 <span>{captureSource}</span>
-                <span>{result.source}</span>
+                <span>{formatSourceLabel(result.source)}</span>
                 <span>{result.model_name}</span>
               </div>
               <h3>{result.item_name}</h3>
@@ -880,7 +898,7 @@ function AppPortfolio() {
                 <p>{result.suggestion}</p>
               </div>
               <div className="analysis-footer">
-                <span>来源：{result.source}</span>
+                <span>来源：{formatSourceLabel(result.source)}</span>
                 <span>模型：{result.model_name}</span>
               </div>
             </div>
@@ -892,7 +910,7 @@ function AppPortfolio() {
         <article className="soft-panel structure-panel reveal reveal-1">
           <div className="section-head">
             <p className="section-kicker">Structure</p>
-            <h2>现在这个版本已经搭好的部分</h2>
+            <h2>这一版已经完成的部分</h2>
           </div>
 
           <div className="block-grid">
@@ -921,15 +939,15 @@ function AppPortfolio() {
 
       <footer className="portfolio-footer reveal reveal-3">
         <div>
-          <strong>当前阶段</strong>
-          <span>这一版已经适合做过程演示和成果展示，交互也比较完整。</span>
+          <strong>当前状态</strong>
+          <span>这一版已经可以稳定完成识别演示，适合用于成果展示。</span>
         </div>
         <div>
-          <strong>下一步</strong>
-          <span>等数据集和模型准备好，我们再把真实识别能力接进来。</span>
+          <strong>后续方向</strong>
+          <span>后面还可以继续补充类别、优化模型和完善历史记录。</span>
         </div>
         <div className="footer-signature">
-          <span>Realtime Waste Sorting Demo</span>
+          <span>Image-Based Waste Sorting</span>
           <small>赵文杰 · 江苏第二师范学院</small>
         </div>
       </footer>
