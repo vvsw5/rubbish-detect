@@ -357,6 +357,28 @@ button:hover:not(:disabled) {
   z-index: 1;
 }
 
+.hero-copy > .hero-kicker:not(.hero-kicker-refresh),
+.hero-copy > h1:not(.hero-title-refresh),
+.hero-copy > .hero-description:not(.hero-description-refresh),
+.hero-copy > .hero-subline:not(.hero-subline-refresh) {
+  display: none;
+}
+
+.hero-copy-refresh {
+  display: grid;
+}
+
+.hero-title-refresh {
+  margin: 0;
+  max-width: 12ch;
+  font-size: clamp(42px, 7vw, 74px);
+  line-height: 0.98;
+  background: linear-gradient(135deg, #102033 0%, #1a5361 42%, #0f766e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .hero-kicker,
 .section-kicker {
   margin: 0 0 10px;
@@ -1942,6 +1964,15 @@ button:hover:not(:disabled) {
 
 .portfolio-footer span {
   color: rgba(241, 247, 251, 0.78);
+}
+
+.portfolio-footer > div:not(.footer-signature):not(.footer-copy-card) {
+  display: none;
+}
+
+.footer-copy-card {
+  display: grid;
+  gap: 8px;
 }
 
 .footer-signature {

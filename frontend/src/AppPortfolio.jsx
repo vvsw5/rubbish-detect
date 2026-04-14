@@ -582,9 +582,18 @@ function AppPortfolio() {
           <h1>让识别结果更直观地出现。</h1>
           <p className="hero-description">
             上传图片或打开摄像头之后，系统会在同一界面完成预览、识别和结果反馈。
-            页面尽量少讲术语，把重点留给操作过程和最终结果。
+
           </p>
           <p className="hero-subline">当前版本已经接入真实模型，可以直接用于成果展示。</p>
+
+          <div className="hero-copy-refresh">
+            <p className="hero-kicker hero-kicker-refresh">Image-Based Waste Sorting</p>
+            <h1 className="hero-title-refresh">让识别结果更自然地落下来。</h1>
+            <p className="hero-description hero-description-refresh">
+              上传图片或打开摄像头之后，画面、结果和提示会顺着同一条节奏展开，不需要再用很多说明去打断它。
+            </p>
+            <p className="hero-subline hero-subline-refresh">它更像一个会回应你的展示页，而不只是一个功能页面。</p>
+          </div>
 
           <div className="hero-tags">
             <span>图片上传</span>
@@ -945,6 +954,14 @@ function AppPortfolio() {
         <div>
           <strong>后续方向</strong>
           <span>后面还可以继续补充类别、优化模型和完善历史记录。</span>
+        </div>
+        <div className="footer-copy-card">
+          <strong>当前状态</strong>
+          <span>这一版已经可以把识别过程完整地呈现出来，安静但清楚，适合直接拿来展示。</span>
+        </div>
+        <div className="footer-copy-card">
+          <strong>后续方向</strong>
+          <span>接下来会继续把细节磨得更顺一点，让它看起来更轻松，也更耐看。</span>
         </div>
         <div className="footer-signature">
           <span>Image-Based Waste Sorting</span>
