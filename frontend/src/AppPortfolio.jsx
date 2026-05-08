@@ -18,6 +18,8 @@ const API_URL = `${API_BASE_URL}/api/classify`;
 const META_URL = `${API_BASE_URL}/api/meta`;
 const HISTORY_STORAGE_KEY = "trash-classification-history";
 const MAX_HISTORY_ITEMS = 8;
+const HISTORY_THUMBNAIL_DIMENSION = 220;
+const HISTORY_THUMBNAIL_QUALITY = 0.76;
 const MAX_UPLOAD_DIMENSION = 960;
 const MAX_CAMERA_DIMENSION = 960;
 const OPTIMIZED_JPEG_QUALITY = 0.82;
@@ -38,6 +40,10 @@ function getScaledSize(width, height, maxDimension) {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale))
   };
+}
+
+function shouldRevokePreviewUrl(url) {
+  return typeof url === "string" && url.startsWith("blob:");
 }
 
 function loadImageElement(file) {
@@ -116,6 +122,36 @@ async function optimizeImageFile(file, options = {}) {
     type: "image/jpeg",
     lastModified: Date.now()
   });
+}
+
+async function createHistoryThumbnail(file, options = {}) {
+  if (!file.type.startsWith("image/") || typeof document === "undefined") {
+    return "";
+  }
+
+  const {
+    maxDimension = HISTORY_THUMBNAIL_DIMENSION,
+    quality = HISTORY_THUMBNAIL_QUALITY
+  } = options;
+
+  const image = await loadImageElement(file);
+  const scaledSize = getScaledSize(
+    image.naturalWidth,
+    image.naturalHeight,
+    maxDimension
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = scaledSize.width;
+  canvas.height = scaledSize.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return "";
+  }
+
+  context.drawImage(image, 0, 0, scaledSize.width, scaledSize.height);
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 const categoryMeta = {
@@ -278,7 +314,15 @@ function AppPortfolio() {
 
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        setHistoryItems(parsed);
+        setHistoryItems(
+          parsed.filter(
+            (item) =>
+              item &&
+              typeof item === "object" &&
+              item.result &&
+              typeof item.result === "object"
+          )
+        );
       }
     } catch {
       setHistoryItems([]);
@@ -287,7 +331,7 @@ function AppPortfolio() {
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (shouldRevokePreviewUrl(previewUrl)) {
         URL.revokeObjectURL(previewUrl);
       }
     };
@@ -396,7 +440,7 @@ function AppPortfolio() {
   }
 
   function recordCaptureMeta(file, sourceLabel) {
-    if (previewUrl) {
+    if (shouldRevokePreviewUrl(previewUrl)) {
       URL.revokeObjectURL(previewUrl);
     }
 
@@ -435,6 +479,7 @@ function AppPortfolio() {
       timestamp: new Date().toISOString(),
       captureSource: context.captureSource,
       fileName: context.fileName,
+      previewUrl: context.previewUrl || "",
       result: payload
     };
 
@@ -454,6 +499,13 @@ function AppPortfolio() {
   }
 
   function restoreHistoryItem(item) {
+    if (item.previewUrl) {
+      if (shouldRevokePreviewUrl(previewUrl)) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(item.previewUrl);
+    }
+
     setResult(item.result);
     setCaptureSource(item.captureSource || "历史记录");
     setActiveFileName(item.fileName || "");
@@ -515,9 +567,18 @@ function AppPortfolio() {
     setError("");
     setResult(null);
 
+    let historyPreviewUrl = "";
+
+    try {
+      historyPreviewUrl = await createHistoryThumbnail(file);
+    } catch {
+      historyPreviewUrl = "";
+    }
+
     const submitContext = {
       captureSource: sourceLabel,
-      fileName: file.name
+      fileName: file.name,
+      previewUrl: historyPreviewUrl
     };
 
     try {
@@ -1047,6 +1108,15 @@ function AppPortfolio() {
                     className={`history-card ${itemStyle.className}`}
                     onClick={() => restoreHistoryItem(item)}
                   >
+                    {item.previewUrl ? (
+                      <div className="history-card-preview">
+                        <img src={item.previewUrl} alt={item.fileName || item.result.item_name} />
+                      </div>
+                    ) : (
+                      <div className="history-card-preview placeholder" aria-hidden="true">
+                        <span>{itemStyle.badge || "记录"}</span>
+                      </div>
+                    )}
                     <div className="history-card-top">
                       <span>{item.captureSource || "历史记录"}</span>
                       <strong>{formatHistoryTime(item.timestamp)}</strong>
