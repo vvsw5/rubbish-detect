@@ -16,6 +16,8 @@ function resolveApiBaseUrl() {
 const API_BASE_URL = resolveApiBaseUrl();
 const API_URL = `${API_BASE_URL}/api/classify`;
 const META_URL = `${API_BASE_URL}/api/meta`;
+const HISTORY_STORAGE_KEY = "trash-classification-history";
+const MAX_HISTORY_ITEMS = 8;
 const MAX_UPLOAD_DIMENSION = 960;
 const MAX_CAMERA_DIMENSION = 960;
 const OPTIMIZED_JPEG_QUALITY = 0.82;
@@ -187,6 +189,19 @@ function formatSourceLabel(source) {
   return sourceLabelMap[source] || source || "未知来源";
 }
 
+function formatHistoryTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
 const quickNotes = [
   {
     title: "识别链路已打通",
@@ -244,9 +259,30 @@ function AppPortfolio() {
   const [activeFileName, setActiveFileName] = useState("");
   const [lastActionTime, setLastActionTime] = useState("");
   const [resultCycle, setResultCycle] = useState(0);
+  const [historyItems, setHistoryItems] = useState([]);
 
   useEffect(() => {
     void fetchServiceMeta();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setHistoryItems(parsed);
+      }
+    } catch {
+      setHistoryItems([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -383,7 +419,50 @@ function AppPortfolio() {
     loadingTimersRef.current = [];
   }
 
-  async function sendFile(file) {
+  function persistHistory(nextItems) {
+    setHistoryItems(nextItems);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(nextItems));
+  }
+
+  function appendHistoryItem(payload, context) {
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date().toISOString(),
+      captureSource: context.captureSource,
+      fileName: context.fileName,
+      result: payload
+    };
+
+    setHistoryItems((current) => {
+      const nextItems = [entry, ...current].slice(0, MAX_HISTORY_ITEMS);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(nextItems));
+      }
+
+      return nextItems;
+    });
+  }
+
+  function clearHistory() {
+    persistHistory([]);
+  }
+
+  function restoreHistoryItem(item) {
+    setResult(item.result);
+    setCaptureSource(item.captureSource || "历史记录");
+    setActiveFileName(item.fileName || "");
+    setLastActionTime(formatHistoryTime(item.timestamp));
+    setError("");
+    setResultCycle((value) => value + 1);
+  }
+
+  async function sendFile(file, context) {
     setLoading(true);
     setLoadingStage("uploading");
     setError("");
@@ -418,6 +497,7 @@ function AppPortfolio() {
       const payload = await response.json();
       setResult(payload);
       setResultCycle((value) => value + 1);
+      appendHistoryItem(payload, context);
       void fetchServiceMeta();
     } catch (requestError) {
       setError(requestError.message || "请求异常");
@@ -435,11 +515,16 @@ function AppPortfolio() {
     setError("");
     setResult(null);
 
+    const submitContext = {
+      captureSource: sourceLabel,
+      fileName: file.name
+    };
+
     try {
       const optimizedFile = await optimizeImageFile(file);
-      await sendFile(optimizedFile);
+      await sendFile(optimizedFile, submitContext);
     } catch {
-      await sendFile(file);
+      await sendFile(file, submitContext);
     }
   }
 
@@ -932,7 +1017,66 @@ function AppPortfolio() {
           </div>
         </article>
 
-        <article className="soft-panel author-panel reveal reveal-2">
+        <article className="soft-panel history-panel reveal reveal-2">
+          <div className="section-head">
+            <p className="section-kicker">History</p>
+            <div className="history-heading-row">
+              <h2>识别历史记录</h2>
+              <button
+                type="button"
+                className="history-clear-btn"
+                onClick={clearHistory}
+                disabled={historyItems.length === 0}
+              >
+                清空记录
+              </button>
+            </div>
+          </div>
+
+          {historyItems.length > 0 ? (
+            <div className="history-list">
+              {historyItems.map((item) => {
+                const itemStyle =
+                  categoryMeta[item.result.category] || categoryMeta.鍏朵粬鍨冨溇;
+                const itemConfidence = Math.round((item.result.confidence || 0) * 100);
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`history-card ${itemStyle.className}`}
+                    onClick={() => restoreHistoryItem(item)}
+                  >
+                    <div className="history-card-top">
+                      <span>{item.captureSource || "历史记录"}</span>
+                      <strong>{formatHistoryTime(item.timestamp)}</strong>
+                    </div>
+                    <div className="history-card-main">
+                      <h3>{item.result.item_name}</h3>
+                      <span className={`result-badge ${itemStyle.className}`}>
+                        <i />
+                        {itemStyle.badge || "默认"}
+                      </span>
+                    </div>
+                    <div className="history-card-meta">
+                      <span>{item.result.category}</span>
+                      <span>{itemConfidence}%</span>
+                      <span>{formatSourceLabel(item.result.source)}</span>
+                    </div>
+                    {item.fileName && <p>{item.fileName}</p>}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="history-empty">
+              <strong>还没有识别记录</strong>
+              <p>完成一次识别后，结果会自动保留在这里，方便回看和展示。</p>
+            </div>
+          )}
+        </article>
+
+        <article className="soft-panel author-panel reveal reveal-3">
           <div className="section-head">
             <p className="section-kicker">Author</p>
             <h2>项目信息</h2>

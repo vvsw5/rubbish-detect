@@ -1858,7 +1858,7 @@ button:hover:not(:disabled) {
 
 .middle-grid {
   display: grid;
-  grid-template-columns: 1.08fr 0.92fr;
+  grid-template-columns: 1.08fr 0.92fr 0.92fr;
   gap: 18px;
   margin-bottom: 22px;
 }
@@ -1878,6 +1878,156 @@ button:hover:not(:disabled) {
   background:
     radial-gradient(circle at top right, rgba(245, 158, 11, 0.08), transparent 30%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.74));
+}
+
+.history-panel {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.74));
+}
+
+.history-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-heading-row h2 {
+  margin: 0 0 18px;
+}
+
+.history-clear-btn {
+  border: 1px solid rgba(17, 33, 52, 0.08);
+  background: rgba(255, 255, 255, 0.66);
+  color: #28445a;
+  border-radius: 999px;
+  padding: 9px 14px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.history-clear-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.history-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  border: 1px solid rgba(17, 33, 52, 0.06);
+  border-radius: 20px;
+  padding: 16px;
+  cursor: pointer;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.42)),
+    rgba(17, 33, 52, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 46px rgba(17, 33, 52, 0.1);
+  border-color: rgba(17, 33, 52, 0.12);
+}
+
+.history-card.recyclable {
+  background: linear-gradient(160deg, rgba(232, 251, 241, 0.92), rgba(211, 241, 235, 0.74));
+}
+
+.history-card.hazardous {
+  background: linear-gradient(160deg, rgba(255, 240, 239, 0.92), rgba(255, 215, 215, 0.76));
+}
+
+.history-card.kitchen {
+  background: linear-gradient(160deg, rgba(255, 245, 220, 0.94), rgba(255, 230, 186, 0.78));
+}
+
+.history-card.other {
+  background: linear-gradient(160deg, rgba(239, 242, 248, 0.94), rgba(221, 231, 243, 0.78));
+}
+
+.history-card-top,
+.history-card-main,
+.history-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-card-top,
+.history-card-meta,
+.history-card p,
+.history-clear-btn {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.history-card-top {
+  color: #4b6377;
+  font-size: 12px;
+}
+
+.history-card-top strong {
+  color: #1d3951;
+  font-size: 12px;
+}
+
+.history-card-main {
+  margin-top: 10px;
+  align-items: flex-start;
+}
+
+.history-card-main h3 {
+  margin: 0;
+  font-size: 24px;
+  color: #17324a;
+}
+
+.history-card-meta {
+  margin-top: 12px;
+  flex-wrap: wrap;
+  color: #35526a;
+  font-size: 13px;
+}
+
+.history-card p {
+  margin: 10px 0 0;
+  color: #4d6278;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.history-empty {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.28)),
+    rgba(17, 33, 52, 0.04);
+  border: 1px solid rgba(17, 33, 52, 0.05);
+}
+
+.history-empty strong,
+.history-empty p {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.history-empty strong {
+  color: #17324a;
+}
+
+.history-empty p {
+  margin: 0;
+  color: #597082;
 }
 
 .block-card {

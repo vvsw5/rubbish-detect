@@ -1,0 +1,15 @@
+path: ./dataset
+train: images/train
+val: images/val
+
+names:
+  0: plastic_bottle
+  1: can
+  2: carton
+  3: glass_bottle
+  4: battery
+  5: expired_medicine
+  6: banana_peel
+  7: vegetable_leaf
+  8: napkin
+  9: cigarette_butt
