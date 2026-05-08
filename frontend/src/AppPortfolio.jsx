@@ -284,6 +284,10 @@ function formatHistoryTime(value) {
   }).format(new Date(value));
 }
 
+function normalizeLookupText(value) {
+  return (value || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
 const quickNotes = [
   {
     title: "识别链路已打通",
@@ -378,6 +382,111 @@ const disposalGuideSections = [
   }
 ];
 
+const categoryLookupEntries = [
+  {
+    name: "塑料瓶",
+    aliases: ["矿泉水瓶", "饮料瓶", "瓶子", "pet瓶"],
+    category: "可回收物",
+    suggestion: "请尽量清空残液、简单压扁后投入可回收物。"
+  },
+  {
+    name: "旧鞋",
+    aliases: ["鞋子", "旧运动鞋", "旧皮鞋"],
+    category: "可回收物",
+    suggestion: "鞋类较完整时可优先考虑捐赠，无法再使用时投入可回收物。"
+  },
+  {
+    name: "纸箱",
+    aliases: ["快递箱", "纸盒", "纸板箱"],
+    category: "可回收物",
+    suggestion: "请压平、保持干燥后投入可回收物，减少占用空间。"
+  },
+  {
+    name: "玻璃瓶",
+    aliases: ["酒瓶", "酱油瓶", "罐头瓶"],
+    category: "可回收物",
+    suggestion: "清洗后投入可回收物，破损时注意包裹防止划伤。"
+  },
+  {
+    name: "旧衣物",
+    aliases: ["旧衣服", "衣物", "外套"],
+    category: "可回收物",
+    suggestion: "干净完整的衣物可优先捐赠或回收，受污染严重时再按其他垃圾处理。"
+  },
+  {
+    name: "电池",
+    aliases: ["干电池", "纽扣电池", "充电电池"],
+    category: "有害垃圾",
+    suggestion: "请单独收集并投放到有害垃圾点位，避免挤压和高温暴晒。"
+  },
+  {
+    name: "过期药品",
+    aliases: ["药片", "胶囊", "药物"],
+    category: "有害垃圾",
+    suggestion: "保持原包装或密封后投入有害垃圾，不要冲入下水道。"
+  },
+  {
+    name: "灯管",
+    aliases: ["荧光灯", "节能灯", "日光灯"],
+    category: "有害垃圾",
+    suggestion: "易碎灯管请先包裹固定，再交由有害垃圾回收点处理。"
+  },
+  {
+    name: "油漆桶",
+    aliases: ["涂料桶", "油漆罐"],
+    category: "有害垃圾",
+    suggestion: "残留油漆和挥发性物质较强，建议密封后按有害垃圾投放。"
+  },
+  {
+    name: "果皮",
+    aliases: ["水果皮", "香蕉皮", "苹果皮"],
+    category: "厨余垃圾",
+    suggestion: "沥干水分并去除塑料袋后投入厨余垃圾。"
+  },
+  {
+    name: "剩饭剩菜",
+    aliases: ["剩饭", "剩菜", "饭菜"],
+    category: "厨余垃圾",
+    suggestion: "请沥干明显汤汁，避免混入餐盒、筷子等杂物。"
+  },
+  {
+    name: "茶叶渣",
+    aliases: ["茶渣", "咖啡渣"],
+    category: "厨余垃圾",
+    suggestion: "这类有机残渣适合投入厨余垃圾，便于后续资源化利用。"
+  },
+  {
+    name: "蛋壳",
+    aliases: ["鸡蛋壳", "鸭蛋壳"],
+    category: "厨余垃圾",
+    suggestion: "蛋壳可作为厨余垃圾处理，投放前简单沥干即可。"
+  },
+  {
+    name: "纸巾",
+    aliases: ["餐巾纸", "面巾纸", "卫生纸"],
+    category: "其他垃圾",
+    suggestion: "使用后的纸巾纤维短且易污染，通常按其他垃圾处理。"
+  },
+  {
+    name: "陶瓷碎片",
+    aliases: ["陶瓷", "碗碟碎片", "杯子碎片"],
+    category: "其他垃圾",
+    suggestion: "请先包裹好尖锐边缘，再投入其他垃圾，避免划伤清运人员。"
+  },
+  {
+    name: "湿巾",
+    aliases: ["消毒湿巾", "一次性湿巾"],
+    category: "其他垃圾",
+    suggestion: "湿巾不宜回收也不适合厨余处理，请投入其他垃圾。"
+  },
+  {
+    name: "尿不湿",
+    aliases: ["纸尿裤", "尿布"],
+    category: "其他垃圾",
+    suggestion: "请装袋密封后投入其他垃圾，减少异味扩散。"
+  }
+];
+
 const systemBlocks = [
   {
     title: "交互界面",
@@ -424,6 +533,9 @@ function AppPortfolio() {
   const [resultCycle, setResultCycle] = useState(0);
   const [historyItems, setHistoryItems] = useState([]);
   const [activeGuideCategory, setActiveGuideCategory] = useState("");
+  const [lookupKeyword, setLookupKeyword] = useState("");
+  const [lookupResult, setLookupResult] = useState(null);
+  const [lookupTouched, setLookupTouched] = useState(false);
 
   useEffect(() => {
     void fetchServiceMeta();
@@ -668,6 +780,43 @@ function AppPortfolio() {
         block: options.block || "nearest"
       });
     }
+  }
+
+  function runCategoryLookup(event) {
+    event?.preventDefault?.();
+
+    const normalizedKeyword = normalizeLookupText(lookupKeyword);
+    setLookupTouched(true);
+
+    if (!normalizedKeyword) {
+      setLookupResult(null);
+      return;
+    }
+
+    const match = categoryLookupEntries.find((entry) => {
+      const candidates = [entry.name, ...(entry.aliases || [])].map(normalizeLookupText);
+      return candidates.some(
+        (candidate) =>
+          candidate.includes(normalizedKeyword) || normalizedKeyword.includes(candidate)
+      );
+    });
+
+    if (!match) {
+      setLookupResult({
+        status: "empty",
+        keyword: lookupKeyword.trim()
+      });
+      return;
+    }
+
+    const guideDetail =
+      disposalGuideSections.find((section) => section.category === match.category) || null;
+
+    setLookupResult({
+      status: "match",
+      ...match,
+      guideDetail
+    });
   }
 
   function restoreHistoryItem(item) {
@@ -1353,6 +1502,81 @@ function AppPortfolio() {
           </div>
           <p className="guide-library-intro">围绕四类垃圾整理投放要求、常见物品和注意事项，既能配合识别结果讲清楚，也方便单独查阅。</p>
         </div>
+
+        <section className="guide-search-shell">
+          <div className="guide-search-copy">
+            <p className="section-kicker">Lookup</p>
+            <h3>垃圾分类查询</h3>
+            <p>输入物品名称或常见叫法，系统会直接从本地知识库返回垃圾类别与投放建议。</p>
+          </div>
+
+          <form className="guide-search-form" onSubmit={runCategoryLookup}>
+            <label className="guide-search-field">
+              <span>关键词</span>
+              <input
+                type="text"
+                value={lookupKeyword}
+                onChange={(event) => setLookupKeyword(event.target.value)}
+                placeholder="例如：电池、纸箱、果皮、旧鞋"
+              />
+            </label>
+            <button type="submit" className="guide-search-btn">
+              立即查询
+            </button>
+          </form>
+
+          {lookupResult?.status === "match" && (
+            <div className={`lookup-result-card ${categoryMeta[lookupResult.category]?.className || "other"}`}>
+              <div className="lookup-result-topline">
+                <span>查询结果</span>
+                <span className={`result-badge ${categoryMeta[lookupResult.category]?.className || "other"}`}>
+                  <i />
+                  {categoryMeta[lookupResult.category]?.badge || lookupResult.category}
+                </span>
+              </div>
+              <div className="lookup-result-main">
+                <div>
+                  <small>名称</small>
+                  <strong>{lookupResult.name}</strong>
+                </div>
+                <div>
+                  <small>类别</small>
+                  <strong>{lookupResult.category}</strong>
+                </div>
+              </div>
+              <div className="lookup-result-suggestion">
+                <small>投放建议</small>
+                <p>{lookupResult.suggestion}</p>
+              </div>
+              <div className="lookup-result-actions">
+                <button
+                  type="button"
+                  className="lookup-guide-btn"
+                  onClick={() => focusGuideCategory(lookupResult.category, { behavior: "smooth", block: "start" })}
+                >
+                  联动查看投放指南
+                </button>
+                {lookupResult.guideDetail && (
+                  <span>常见物品：{lookupResult.guideDetail.examples.slice(0, 2).join("、")}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {lookupResult?.status === "empty" && (
+            <div className="lookup-empty-state">
+              <strong>暂时没有查到这个关键词</strong>
+              <p>你可以换个更常见的叫法试试，例如“饮料瓶”“纸箱”“电池”“果皮”。</p>
+            </div>
+          )}
+
+          {!lookupResult && lookupTouched && !normalizeLookupText(lookupKeyword) && (
+            <div className="lookup-empty-state subtle">
+              <strong>先输入一个关键词再查询</strong>
+              <p>这个查询功能走的是本地知识库，不依赖识别模型，所以适合快速查规则。</p>
+            </div>
+          )}
+        </section>
 
         <div className="guide-library-grid">
           {disposalGuideSections.map((section, index) => {
