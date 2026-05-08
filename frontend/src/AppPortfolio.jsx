@@ -299,6 +299,85 @@ const quickNotes = [
   }
 ];
 
+const disposalGuideSections = [
+  {
+    category: "可回收物",
+    eyebrow: "循环再生",
+    summary: "材质相对单一、具备再利用价值的生活废弃物，适合进入回收体系。",
+    requirements: [
+      "投放前尽量保持干燥、洁净，避免被厨余和油污污染。",
+      "纸箱、塑料瓶、金属罐可压扁或折叠后投放，节省回收空间。",
+      "带有不同材质附件的物品，优先拆分后分别处理。"
+    ],
+    examples: [
+      "报纸书本、纸箱、快递纸袋",
+      "塑料瓶、饮料罐、洗净玻璃瓶",
+      "旧衣物、金属衣架、小家电外壳"
+    ],
+    cautions: [
+      "被严重污染的纸巾、餐盒通常不再按可回收物处理。",
+      "陶瓷、镜子、耐热玻璃多数地区不进入普通玻璃回收渠道。"
+    ]
+  },
+  {
+    category: "有害垃圾",
+    eyebrow: "单独投放",
+    summary: "含有重金属、腐蚀性或潜在有毒成分，需要进入专门回收流程。",
+    requirements: [
+      "尽量保持原包装或做好密封，防止渗漏、挥发和二次污染。",
+      "破损灯管、温度计等易碎物应先包裹，再投放到指定点位。",
+      "不要与普通生活垃圾混装，更不要投入厨余或可回收桶。"
+    ],
+    examples: [
+      "废旧电池、纽扣电池、充电电池",
+      "过期药品、药剂包装、废弃消毒剂",
+      "灯管灯泡、油漆桶、杀虫剂容器"
+    ],
+    cautions: [
+      "不同地区对荧光灯、指甲油、染发剂的归类可能略有差异。",
+      "发现泄漏时应先做好个人防护，再联系物业或专门回收点处理。"
+    ]
+  },
+  {
+    category: "厨余垃圾",
+    eyebrow: "湿垃圾处理",
+    summary: "容易腐烂的有机废弃物，可用于堆肥、厌氧发酵等资源化利用。",
+    requirements: [
+      "投放前先沥干明显水分，并去掉塑料袋、餐具等非食材包装。",
+      "尽量保持内容纯净，以剩饭剩菜、果皮菜叶等可腐有机物为主。",
+      "如果使用专用厨余袋，应确认当地是否允许连袋投放。"
+    ],
+    examples: [
+      "剩饭剩菜、果皮菜叶、茶渣咖啡渣",
+      "蛋壳、果核、面包糕点、过期食品",
+      "家庭做饭产生的边角料和净菜残渣"
+    ],
+    cautions: [
+      "大棒骨、贝壳、椰子壳等硬质残渣在部分地区按其他垃圾处理。",
+      "混入塑料包装和纸巾会明显影响后续资源化处理效果。"
+    ]
+  },
+  {
+    category: "其他垃圾",
+    eyebrow: "兜底分类",
+    summary: "不属于前三类、且暂时难以回收利用的生活废弃物，作为末端兜底处理。",
+    requirements: [
+      "尽量装袋投放，减少散落和异味扩散，保持投放点整洁。",
+      "带尖锐边角的物品先包裹后投放，避免划伤清运人员。",
+      "如果物品已被油污、血污或强污染覆盖，通常应按其他垃圾处理。"
+    ],
+    examples: [
+      "纸巾、湿巾、一次性餐具、烟头",
+      "陶瓷碎片、灰土、猫砂、尘土",
+      "尿不湿、受污染包装袋、难回收复合材料"
+    ],
+    cautions: [
+      "可回收物一旦被污染严重，往往会转入其他垃圾处理。",
+      "不同城市对榴莲壳、粽叶、宠物粪便等项目的细分要求可能不同。"
+    ]
+  }
+];
+
 const systemBlocks = [
   {
     title: "交互界面",
@@ -325,9 +404,11 @@ const authorInfo = [
 
 function AppPortfolio() {
   const shellRef = useRef(null);
+  const guideSectionRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const guideCardRefs = useRef({});
   const loadingTimersRef = useRef([]);
   const [previewUrl, setPreviewUrl] = useState("");
   const [result, setResult] = useState(null);
@@ -342,6 +423,7 @@ function AppPortfolio() {
   const [lastActionTime, setLastActionTime] = useState("");
   const [resultCycle, setResultCycle] = useState(0);
   const [historyItems, setHistoryItems] = useState([]);
+  const [activeGuideCategory, setActiveGuideCategory] = useState("");
 
   useEffect(() => {
     void fetchServiceMeta();
@@ -397,6 +479,14 @@ function AppPortfolio() {
       loadingTimersRef.current = [];
     };
   }, []);
+
+  useEffect(() => {
+    if (!result?.category) {
+      return;
+    }
+
+    focusGuideCategory(result.category, { behavior: "smooth", block: "start" });
+  }, [resultCycle]);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -546,6 +636,38 @@ function AppPortfolio() {
 
   function clearHistory() {
     persistHistory([]);
+  }
+
+  function registerGuideCard(category, node) {
+    if (!category) {
+      return;
+    }
+
+    if (node) {
+      guideCardRefs.current[category] = node;
+      return;
+    }
+
+    delete guideCardRefs.current[category];
+  }
+
+  function focusGuideCategory(category, options = {}) {
+    if (!category) {
+      return;
+    }
+
+    setActiveGuideCategory(category);
+
+    const card = guideCardRefs.current[category];
+    const section = guideSectionRef.current;
+    const scrollTarget = card || section;
+
+    if (scrollTarget && typeof scrollTarget.scrollIntoView === "function") {
+      scrollTarget.scrollIntoView({
+        behavior: options.behavior || "smooth",
+        block: options.block || "nearest"
+      });
+    }
   }
 
   function restoreHistoryItem(item) {
@@ -1108,6 +1230,13 @@ function AppPortfolio() {
                 <small>投放建议</small>
                 <p>{result.suggestion}</p>
               </div>
+              <button
+                type="button"
+                className="guide-link-btn"
+                onClick={() => focusGuideCategory(result.category, { behavior: "smooth", block: "start" })}
+              >
+                查看详细投放指南
+              </button>
               <div className="analysis-footer">
                 <span>来源：{formatSourceLabel(result.source)}</span>
                 <span>模型：{result.model_name}</span>
@@ -1214,6 +1343,68 @@ function AppPortfolio() {
             ))}
           </ul>
         </article>
+      </section>
+
+      <section ref={guideSectionRef} className="guide-library-panel reveal reveal-1">
+        <div className="section-head guide-library-head">
+          <div>
+            <p className="section-kicker">Guide</p>
+            <h2>投放指南知识库</h2>
+          </div>
+          <p className="guide-library-intro">围绕四类垃圾整理投放要求、常见物品和注意事项，既能配合识别结果讲清楚，也方便单独查阅。</p>
+        </div>
+
+        <div className="guide-library-grid">
+          {disposalGuideSections.map((section, index) => {
+            const guideStyle = categoryMeta[section.category] || categoryMeta["其他垃圾"];
+            const isActive = activeGuideCategory === section.category;
+
+            return (
+              <article
+                key={section.category}
+                ref={(node) => registerGuideCard(section.category, node)}
+                className={`guide-card ${guideStyle.className} ${isActive ? "active" : ""} reveal reveal-${(index % 3) + 1}`.trim()}
+              >
+                <div className="guide-card-topline">
+                  <span>{section.eyebrow}</span>
+                  <span className={`result-badge ${guideStyle.className}`}>
+                    <i />
+                    {guideStyle.badge || section.category}
+                  </span>
+                </div>
+                <h3>{section.category}</h3>
+                <p className="guide-card-summary">{section.summary}</p>
+
+                <div className="guide-card-block">
+                  <small>投放要求</small>
+                  <ul className="guide-list">
+                    {section.requirements.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="guide-card-block">
+                  <small>常见物品</small>
+                  <div className="guide-chip-row">
+                    {section.examples.map((item) => (
+                      <span key={item}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="guide-card-block caution">
+                  <small>注意事项</small>
+                  <ul className="guide-list compact">
+                    {section.cautions.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <footer className="portfolio-footer reveal reveal-3">
