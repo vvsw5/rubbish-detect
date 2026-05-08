@@ -19,6 +19,7 @@ const META_URL = `${API_BASE_URL}/api/meta`;
 const FEEDBACK_URL = `${API_BASE_URL}/api/feedback`;
 const HISTORY_STORAGE_KEY = "trash-classification-history";
 const MAX_HISTORY_ITEMS = 8;
+const FEEDBACK_FETCH_LIMIT = 12;
 const HISTORY_THUMBNAIL_DIMENSION = 220;
 const HISTORY_THUMBNAIL_QUALITY = 0.76;
 const MAX_UPLOAD_DIMENSION = 960;
@@ -292,6 +293,12 @@ function formatHistoryTime(value) {
   }).format(new Date(value));
 }
 
+function formatFeedbackStatus(userFeedback) {
+  return userFeedback === "wrong"
+    ? "\u5df2\u4fee\u6b63"
+    : "\u8bc6\u522b\u6b63\u786e";
+}
+
 function normalizeLookupText(value) {
   return (value || "").trim().toLowerCase().replace(/\s+/g, "");
 }
@@ -545,6 +552,15 @@ function AppPortfolio() {
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupTouched, setLookupTouched] = useState(false);
   const [currentImageId, setCurrentImageId] = useState("");
+  const [feedbackRecords, setFeedbackRecords] = useState([]);
+  const [feedbackSummary, setFeedbackSummary] = useState({
+    total: 0,
+    correct: 0,
+    wrong: 0,
+    latest_at: ""
+  });
+  const [feedbackHistoryLoading, setFeedbackHistoryLoading] = useState(false);
+  const [feedbackHistoryError, setFeedbackHistoryError] = useState("");
   const [feedbackState, setFeedbackState] = useState({
     status: "idle",
     mode: "",
@@ -554,6 +570,7 @@ function AppPortfolio() {
 
   useEffect(() => {
     void fetchServiceMeta();
+    void fetchFeedbackHistory();
   }, []);
 
   useEffect(() => {
@@ -681,6 +698,37 @@ function AppPortfolio() {
       setServiceMeta(await response.json());
     } catch {
       setServiceMeta(null);
+    }
+  }
+
+  async function fetchFeedbackHistory() {
+    setFeedbackHistoryLoading(true);
+    setFeedbackHistoryError("");
+
+    try {
+      const response = await fetch(`${FEEDBACK_URL}?limit=${FEEDBACK_FETCH_LIMIT}`, {
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.detail || "\u53cd\u9988\u8bb0\u5f55\u52a0\u8f7d\u5931\u8d25");
+      }
+
+      const payload = await response.json();
+      setFeedbackRecords(Array.isArray(payload?.items) ? payload.items : []);
+      setFeedbackSummary({
+        total: payload?.summary?.total || 0,
+        correct: payload?.summary?.correct || 0,
+        wrong: payload?.summary?.wrong || 0,
+        latest_at: payload?.summary?.latest_at || ""
+      });
+    } catch (fetchError) {
+      setFeedbackHistoryError(
+        fetchError.message || "\u53cd\u9988\u8bb0\u5f55\u52a0\u8f7d\u5931\u8d25"
+      );
+    } finally {
+      setFeedbackHistoryLoading(false);
     }
   }
 
@@ -891,6 +939,7 @@ function AppPortfolio() {
         message:
           "\u611f\u8c22\u53cd\u9988\uff0c\u7cfb\u7edf\u5df2\u8bb0\u5f55\u8fd9\u6b21\u6b63\u786e\u8bc6\u522b\u3002"
       });
+      void fetchFeedbackHistory();
     } catch (feedbackError) {
       setFeedbackState((current) => ({
         ...current,
@@ -929,6 +978,7 @@ function AppPortfolio() {
         message:
           "\u611f\u8c22\u53cd\u9988\uff0c\u7cfb\u7edf\u5df2\u8bb0\u5f55\u4f60\u63d0\u4f9b\u7684\u6b63\u786e\u7c7b\u522b\u3002"
       });
+      void fetchFeedbackHistory();
     } catch (feedbackError) {
       setFeedbackState((current) => ({
         ...current,
@@ -1637,7 +1687,7 @@ function AppPortfolio() {
             <div className="history-list">
               {historyItems.map((item) => {
                 const itemStyle =
-                  categoryMeta[item.result.category] || categoryMeta.鍏朵粬鍨冨溇;
+                  categoryMeta[item.result.category] || categoryMeta["其他垃圾"];
                 const itemConfidence = Math.round((item.result.confidence || 0) * 100);
 
                 return (
@@ -1697,6 +1747,166 @@ function AppPortfolio() {
             ))}
           </ul>
         </article>
+      </section>
+
+      <section className="feedback-board-panel reveal reveal-2">
+        <div className="section-head feedback-board-head">
+          <div>
+            <p className="section-kicker">Feedback</p>
+            <h2>识别反馈记录</h2>
+          </div>
+          <button
+            type="button"
+            className="feedback-board-refresh-btn"
+            onClick={() => void fetchFeedbackHistory()}
+            disabled={feedbackHistoryLoading}
+          >
+            {feedbackHistoryLoading ? "\u5237\u65b0\u4e2d" : "\u5237\u65b0\u8bb0\u5f55"}
+          </button>
+        </div>
+
+        <p className="feedback-board-intro">
+          {
+            "\u628a\u6bcf\u6b21\u201c\u6b63\u786e\u201d\u6216\u201c\u9519\u8bef\u4fee\u6b63\u201d\u7684\u53cd\u9988\u6c89\u6dc0\u4e0b\u6765\uff0c\u65b9\u4fbf\u540e\u7eed\u68c0\u67e5\u8bc6\u522b\u8868\u73b0\uff0c\u4e5f\u4e3a\u6a21\u578b\u4f18\u5316\u79ef\u7d2f\u771f\u5b9e\u6570\u636e\u3002"
+          }
+        </p>
+
+        <div className="feedback-summary-grid">
+          <article className="feedback-summary-card">
+            <small>{"\u7d2f\u8ba1\u53cd\u9988"}</small>
+            <strong>{feedbackSummary.total}</strong>
+            <span>{"\u5df2\u8bb0\u5f55\u5230\u672c\u5730\u53cd\u9988\u5e93"}</span>
+          </article>
+          <article className="feedback-summary-card">
+            <small>{"\u786e\u8ba4\u6b63\u786e"}</small>
+            <strong>{feedbackSummary.correct}</strong>
+            <span>{"\u8bf4\u660e\u7cfb\u7edf\u7ed3\u679c\u88ab\u7528\u6237\u76f4\u63a5\u63a5\u53d7"}</span>
+          </article>
+          <article className="feedback-summary-card">
+            <small>{"\u9519\u8bef\u4fee\u6b63"}</small>
+            <strong>{feedbackSummary.wrong}</strong>
+            <span>{"\u8fd9\u4e9b\u8bb0\u5f55\u53ef\u7528\u4e8e\u540e\u7eed\u7cbe\u8c03\u548c\u6807\u6ce8"}</span>
+          </article>
+          <article className="feedback-summary-card wide">
+            <small>{"\u6700\u65b0\u53cd\u9988"}</small>
+            <strong>
+              {feedbackSummary.latest_at
+                ? formatHistoryTime(feedbackSummary.latest_at)
+                : "\u6682\u65e0\u8bb0\u5f55"}
+            </strong>
+            <span>{"\u6700\u65b0\u4e00\u6761\u53cd\u9988\u5199\u5165\u7684\u65f6\u95f4"}</span>
+          </article>
+        </div>
+
+        {feedbackHistoryError && (
+          <div
+            className={`feedback-record-empty ${feedbackRecords.length ? "compact" : ""}`.trim()}
+          >
+            <strong>{"\u53cd\u9988\u8bb0\u5f55\u6682\u65f6\u6ca1\u52a0\u8f7d\u6210\u529f"}</strong>
+            <p>{feedbackHistoryError}</p>
+          </div>
+        )}
+
+        {feedbackHistoryLoading && (
+          <div
+            className={`feedback-record-empty ${feedbackRecords.length ? "compact" : ""}`.trim()}
+          >
+            <strong>{"\u6b63\u5728\u8bfb\u53d6\u6700\u8fd1\u7684\u53cd\u9988\u8bb0\u5f55"}</strong>
+            <p>
+              {
+                "\u7cfb\u7edf\u6b63\u5728\u4ece\u672c\u5730\u53cd\u9988\u5b58\u50a8\u4e2d\u6574\u7406\u6700\u65b0\u6570\u636e\u3002"
+              }
+            </p>
+          </div>
+        )}
+
+        {feedbackRecords.length > 0 && (
+          <div className="feedback-record-list">
+            {feedbackRecords.map((item) => {
+              const targetCategory = item.corrected_category || item.original_result.category;
+              const itemStyle =
+                categoryMeta[targetCategory] || categoryMeta["其他垃圾"];
+              const itemStatusClass = item.user_feedback === "wrong" ? "wrong" : "correct";
+
+              return (
+                <article
+                  key={item.feedback_id}
+                  className={`feedback-record-card ${itemStyle.className}`}
+                >
+                  <div className="feedback-record-topline">
+                    <span className={`feedback-record-status ${itemStatusClass}`}>
+                      {formatFeedbackStatus(item.user_feedback)}
+                    </span>
+                    <strong>{formatHistoryTime(item.saved_at || item.timestamp)}</strong>
+                  </div>
+
+                  <div className="feedback-record-main">
+                    <div>
+                      <h3>{item.original_result.item_name}</h3>
+                      <p>
+                        {item.file_name ||
+                          item.capture_source ||
+                          "\u672c\u6b21\u8bc6\u522b\u53cd\u9988"}
+                      </p>
+                    </div>
+                    <span className={`result-badge ${itemStyle.className}`}>
+                      <i />
+                      {itemStyle.badge || targetCategory}
+                    </span>
+                  </div>
+
+                  <div className="feedback-record-flow">
+                    <span>
+                      {"\u539f\u8bc6\u522b\uff1a"}
+                      {item.original_result.category}
+                    </span>
+                    <span>
+                      {item.user_feedback === "wrong"
+                        ? `\u4fee\u6b63\u4e3a\uff1a${item.corrected_category}`
+                        : "\u7528\u6237\u5df2\u786e\u8ba4\u8be5\u7ed3\u679c\u6b63\u786e"}
+                    </span>
+                  </div>
+
+                  <div className="feedback-record-note">
+                    <small>{"\u6295\u653e\u5efa\u8bae"}</small>
+                    <p>{item.original_result.suggestion}</p>
+                  </div>
+
+                  <div className="feedback-record-actions">
+                    <span>
+                      {(item.capture_source || "\u4e0a\u4f20\u8bc6\u522b") +
+                        " · " +
+                        formatSourceLabel(item.original_result.source)}
+                    </span>
+                    <button
+                      type="button"
+                      className="feedback-guide-btn"
+                      onClick={() =>
+                        focusGuideCategory(targetCategory, {
+                          behavior: "smooth",
+                          block: "start"
+                        })
+                      }
+                    >
+                      {"\u8054\u52a8\u67e5\u770b\u6295\u653e\u6307\u5357"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        {!feedbackHistoryLoading && !feedbackHistoryError && feedbackRecords.length === 0 && (
+          <div className="feedback-record-empty">
+            <strong>{"\u8fd8\u6ca1\u6709\u53cd\u9988\u8bb0\u5f55"}</strong>
+            <p>
+              {
+                "\u5b8c\u6210\u4e00\u6b21\u8bc6\u522b\u540e\uff0c\u70b9\u51fb\u201c\u6b63\u786e\u201d\u6216\u201c\u9519\u8bef\u201d\u63d0\u4ea4\u53cd\u9988\uff0c\u8fd9\u91cc\u5c31\u4f1a\u5f00\u59cb\u7d2f\u79ef\u53ef\u56de\u770b\u7684\u6570\u636e\u3002"
+              }
+            </p>
+          </div>
+        )}
       </section>
 
       <section ref={guideSectionRef} className="guide-library-panel reveal reveal-1">

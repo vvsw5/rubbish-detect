@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from app.model_runtime import build_service_meta, get_allowed_origins, predict
 
@@ -50,10 +50,27 @@ class FeedbackResponse(BaseModel):
     saved_at: str
 
 
+class FeedbackRecord(FeedbackPayload):
+    feedback_id: str
+    saved_at: str
+
+
+class FeedbackSummary(BaseModel):
+    total: int
+    correct: int
+    wrong: int
+    latest_at: str | None = None
+
+
+class FeedbackListResponse(BaseModel):
+    items: list[FeedbackRecord]
+    summary: FeedbackSummary
+
+
 app = FastAPI(
     title="Waste Classification API",
     description="Backend API for the waste classification demo",
-    version="2.4.0",
+    version="2.5.0",
 )
 
 
@@ -76,6 +93,27 @@ def append_feedback_record(record: dict) -> None:
         file.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def read_feedback_records() -> list[FeedbackRecord]:
+    if not FEEDBACK_STORE_PATH.exists():
+        return []
+
+    records: list[FeedbackRecord] = []
+
+    with FEEDBACK_STORE_PATH.open("r", encoding="utf-8") as file:
+        for raw_line in file:
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            try:
+                payload = json.loads(line)
+                records.append(FeedbackRecord(**payload))
+            except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+                continue
+
+    return records
+
+
 @app.get("/")
 def read_root() -> dict:
     return {
@@ -92,6 +130,19 @@ def health_check() -> dict:
 @app.get("/api/meta", response_model=ServiceMeta)
 def service_meta() -> ServiceMeta:
     return ServiceMeta(**build_service_meta())
+
+
+@app.get("/api/feedback", response_model=FeedbackListResponse)
+def list_feedback(limit: int = Query(default=12, ge=1, le=60)) -> FeedbackListResponse:
+    records = read_feedback_records()
+    summary = FeedbackSummary(
+        total=len(records),
+        correct=sum(1 for item in records if item.user_feedback == "correct"),
+        wrong=sum(1 for item in records if item.user_feedback == "wrong"),
+        latest_at=records[-1].saved_at if records else None,
+    )
+    items = list(reversed(records))[:limit]
+    return FeedbackListResponse(items=items, summary=summary)
 
 
 @app.post("/api/classify", response_model=ClassificationResult)
