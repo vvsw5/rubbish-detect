@@ -1,3 +1,8 @@
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+from uuid import uuid4
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -5,27 +10,50 @@ from pydantic import BaseModel, Field
 from app.model_runtime import build_service_meta, get_allowed_origins, predict
 
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+FEEDBACK_STORE_PATH = BASE_DIR / "feedback_store.jsonl"
+
+
 class ClassificationResult(BaseModel):
-    item_name: str = Field(..., description="识别到的物品名称")
-    category: str = Field(..., description="垃圾类别")
-    confidence: float = Field(..., ge=0, le=1, description="置信度")
-    suggestion: str = Field(..., description="投放建议")
-    source: str = Field(..., description="结果来源")
-    model_name: str = Field(..., description="当前模型名称")
-    provider: str = Field(..., description="当前模型模式")
+    item_name: str = Field(..., description="recognized item name")
+    category: str = Field(..., description="waste category")
+    confidence: float = Field(..., ge=0, le=1, description="classification confidence")
+    suggestion: str = Field(..., description="disposal suggestion")
+    source: str = Field(..., description="result source")
+    model_name: str = Field(..., description="model name")
+    provider: str = Field(..., description="runtime provider")
 
 
 class ServiceMeta(BaseModel):
-    provider: str = Field(..., description="当前后端启用的模型模式")
-    model_name: str = Field(..., description="当前模型名称")
-    ready: bool = Field(..., description="模型是否就绪")
-    mapping_path: str = Field(..., description="标签映射配置文件路径")
+    provider: str = Field(..., description="active inference provider")
+    model_name: str = Field(..., description="active model name")
+    ready: bool = Field(..., description="service readiness flag")
+    mapping_path: str = Field(..., description="label mapping file path")
+
+
+class FeedbackPayload(BaseModel):
+    image_id: str = Field(..., description="client-generated image identifier")
+    original_result: ClassificationResult
+    user_feedback: str = Field(..., description="correct or wrong")
+    corrected_category: str | None = Field(
+        default=None,
+        description="corrected waste category when feedback is wrong",
+    )
+    capture_source: str | None = Field(default=None, description="image source label")
+    file_name: str | None = Field(default=None, description="uploaded file name")
+    timestamp: str | None = Field(default=None, description="feedback timestamp from client")
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+    feedback_id: str
+    saved_at: str
 
 
 app = FastAPI(
-    title="垃圾分类识别系统",
-    description="毕业设计演示版后端接口",
-    version="2.3.0",
+    title="Waste Classification API",
+    description="Backend API for the waste classification demo",
+    version="2.4.0",
 )
 
 
@@ -42,10 +70,16 @@ app.add_middleware(
 )
 
 
+def append_feedback_record(record: dict) -> None:
+    FEEDBACK_STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with FEEDBACK_STORE_PATH.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 @app.get("/")
 def read_root() -> dict:
     return {
-        "message": "垃圾分类识别后端已启动",
+        "message": "Waste classification backend is running",
         "docs": "/docs",
     }
 
@@ -68,3 +102,22 @@ async def classify(file: UploadFile = File(...)) -> ClassificationResult:
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return ClassificationResult(**result)
+
+
+@app.post("/api/feedback", response_model=FeedbackResponse)
+def submit_feedback(payload: FeedbackPayload) -> FeedbackResponse:
+    if payload.user_feedback not in {"correct", "wrong"}:
+        raise HTTPException(status_code=400, detail="user_feedback must be correct or wrong")
+
+    if payload.user_feedback == "wrong" and not payload.corrected_category:
+        raise HTTPException(status_code=400, detail="corrected_category is required when feedback is wrong")
+
+    saved_at = datetime.now(timezone.utc).isoformat()
+    feedback_id = str(uuid4())
+    record = {
+        "feedback_id": feedback_id,
+        "saved_at": saved_at,
+        **payload.model_dump(),
+    }
+    append_feedback_record(record)
+    return FeedbackResponse(status="ok", feedback_id=feedback_id, saved_at=saved_at)

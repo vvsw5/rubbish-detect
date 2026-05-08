@@ -1829,6 +1829,123 @@ button:hover:not(:disabled) {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
+.feedback-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.feedback-panel-copy small,
+.feedback-panel-copy p,
+.feedback-btn,
+.feedback-select-field span,
+.feedback-select-field select,
+.feedback-submit-btn,
+.feedback-status {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.feedback-panel-copy small {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(20, 39, 58, 0.72);
+}
+
+.feedback-panel-copy p {
+  margin: 0;
+  color: #4d6278;
+}
+
+.feedback-action-row,
+.feedback-submit-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.feedback-btn,
+.feedback-submit-btn {
+  flex: 1 1 0;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 33, 52, 0.08);
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.feedback-btn.positive {
+  background: linear-gradient(135deg, rgba(232, 251, 241, 0.96), rgba(211, 241, 235, 0.82));
+  color: #16745f;
+}
+
+.feedback-btn.negative {
+  background: linear-gradient(135deg, rgba(255, 240, 239, 0.96), rgba(255, 215, 215, 0.82));
+  color: #bb4040;
+}
+
+.feedback-btn:disabled,
+.feedback-submit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.feedback-correction-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.feedback-select-field {
+  display: grid;
+  gap: 8px;
+}
+
+.feedback-select-field span {
+  color: rgba(20, 39, 58, 0.72);
+  font-size: 13px;
+}
+
+.feedback-select-field select {
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 33, 52, 0.08);
+  background: rgba(255, 255, 255, 0.84);
+  color: #17324a;
+}
+
+.feedback-submit-btn {
+  background: linear-gradient(135deg, #123b5d, #178089);
+  color: #f5fbff;
+}
+
+.feedback-status {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.feedback-status.success {
+  background: rgba(232, 251, 241, 0.9);
+  color: #176753;
+}
+
+.feedback-status.error {
+  background: rgba(255, 240, 239, 0.92);
+  color: #b23a3a;
+}
+
+.feedback-status.submitting,
+.feedback-status.selecting,
+.feedback-status.idle {
+  background: rgba(239, 242, 248, 0.92);
+  color: #4a6790;
+}
+
 .analysis-footer {
   margin-top: 20px;
   flex-direction: column;
@@ -2975,6 +3092,11 @@ button:hover:not(:disabled) {
     grid-template-columns: 1fr;
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .feedback-action-row,
+  .feedback-submit-row {
+    flex-direction: column;
   }
 
   .guide-card h3 {

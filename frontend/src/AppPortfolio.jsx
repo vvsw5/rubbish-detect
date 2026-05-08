@@ -16,6 +16,7 @@ function resolveApiBaseUrl() {
 const API_BASE_URL = resolveApiBaseUrl();
 const API_URL = `${API_BASE_URL}/api/classify`;
 const META_URL = `${API_BASE_URL}/api/meta`;
+const FEEDBACK_URL = `${API_BASE_URL}/api/feedback`;
 const HISTORY_STORAGE_KEY = "trash-classification-history";
 const MAX_HISTORY_ITEMS = 8;
 const HISTORY_THUMBNAIL_DIMENSION = 220;
@@ -262,6 +263,13 @@ const sourceLabelMap = {
   "yolo-inference": "模型识别",
   "mock-rule-engine": "演示规则"
 };
+
+const categoryOptions = [
+  "\u53ef\u56de\u6536\u7269",
+  "\u6709\u5bb3\u5783\u573e",
+  "\u53a8\u4f59\u5783\u573e",
+  "\u5176\u4ed6\u5783\u573e"
+];
 
 function formatProviderLabel(provider) {
   return providerLabelMap[provider] || provider || "未设置";
@@ -536,6 +544,13 @@ function AppPortfolio() {
   const [lookupKeyword, setLookupKeyword] = useState("");
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupTouched, setLookupTouched] = useState(false);
+  const [currentImageId, setCurrentImageId] = useState("");
+  const [feedbackState, setFeedbackState] = useState({
+    status: "idle",
+    mode: "",
+    correctedCategory: "",
+    message: ""
+  });
 
   useEffect(() => {
     void fetchServiceMeta();
@@ -819,6 +834,110 @@ function AppPortfolio() {
     });
   }
 
+  async function submitFeedback(payload) {
+    const response = await fetch(FEEDBACK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => null);
+      throw new Error(errorPayload?.detail || "\u53cd\u9988\u63d0\u4ea4\u5931\u8d25");
+    }
+
+    return response.json();
+  }
+
+  async function handleFeedback(mode) {
+    if (!result || !currentImageId) {
+      return;
+    }
+
+    if (mode === "wrong") {
+      setFeedbackState((current) => ({
+        ...current,
+        mode: "wrong",
+        status: "selecting",
+        message: ""
+      }));
+      return;
+    }
+
+    setFeedbackState((current) => ({
+      ...current,
+      status: "submitting",
+      mode: "correct",
+      message: ""
+    }));
+
+    try {
+      await submitFeedback({
+        image_id: currentImageId,
+        original_result: result,
+        user_feedback: "correct",
+        corrected_category: null,
+        capture_source: captureSource || null,
+        file_name: activeFileName || null,
+        timestamp: new Date().toISOString()
+      });
+
+      setFeedbackState({
+        status: "success",
+        mode: "correct",
+        correctedCategory: "",
+        message:
+          "\u611f\u8c22\u53cd\u9988\uff0c\u7cfb\u7edf\u5df2\u8bb0\u5f55\u8fd9\u6b21\u6b63\u786e\u8bc6\u522b\u3002"
+      });
+    } catch (feedbackError) {
+      setFeedbackState((current) => ({
+        ...current,
+        status: "error",
+        message: feedbackError.message || "\u53cd\u9988\u63d0\u4ea4\u5931\u8d25"
+      }));
+    }
+  }
+
+  async function handleWrongFeedbackSubmit() {
+    if (!result || !currentImageId || !feedbackState.correctedCategory) {
+      return;
+    }
+
+    setFeedbackState((current) => ({
+      ...current,
+      status: "submitting",
+      message: ""
+    }));
+
+    try {
+      await submitFeedback({
+        image_id: currentImageId,
+        original_result: result,
+        user_feedback: "wrong",
+        corrected_category: feedbackState.correctedCategory,
+        capture_source: captureSource || null,
+        file_name: activeFileName || null,
+        timestamp: new Date().toISOString()
+      });
+
+      setFeedbackState({
+        status: "success",
+        mode: "wrong",
+        correctedCategory: "",
+        message:
+          "\u611f\u8c22\u53cd\u9988\uff0c\u7cfb\u7edf\u5df2\u8bb0\u5f55\u4f60\u63d0\u4f9b\u7684\u6b63\u786e\u7c7b\u522b\u3002"
+      });
+    } catch (feedbackError) {
+      setFeedbackState((current) => ({
+        ...current,
+        status: "error",
+        message: feedbackError.message || "\u53cd\u9988\u63d0\u4ea4\u5931\u8d25"
+      }));
+    }
+  }
+
   function restoreHistoryItem(item) {
     if (item.previewUrl) {
       if (shouldRevokePreviewUrl(previewUrl)) {
@@ -833,6 +952,13 @@ function AppPortfolio() {
     setLastActionTime(formatHistoryTime(item.timestamp));
     setError("");
     setResultCycle((value) => value + 1);
+    setCurrentImageId("");
+    setFeedbackState({
+      status: "idle",
+      mode: "",
+      correctedCategory: "",
+      message: ""
+    });
   }
 
   async function sendFile(file, context) {
@@ -870,6 +996,13 @@ function AppPortfolio() {
       const payload = await response.json();
       setResult(payload);
       setResultCycle((value) => value + 1);
+      setCurrentImageId(`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+      setFeedbackState({
+        status: "idle",
+        mode: "",
+        correctedCategory: "",
+        message: ""
+      });
       appendHistoryItem(payload, context);
       void fetchServiceMeta();
     } catch (requestError) {
@@ -1386,6 +1519,78 @@ function AppPortfolio() {
               >
                 查看详细投放指南
               </button>
+              <div className="feedback-panel">
+                <div className="feedback-panel-copy">
+                  <small>\u8bc6\u522b\u7ed3\u679c\u53cd\u9988</small>
+                  <p>
+                    {
+                      "\u544a\u8bc9\u7cfb\u7edf\u8fd9\u6b21\u8bc6\u522b\u662f\u5426\u6b63\u786e\uff0c\u4e3a\u540e\u7eed\u4f18\u5316\u79ef\u7d2f\u771f\u5b9e\u53cd\u9988\u6570\u636e\u3002"
+                    }
+                  </p>
+                </div>
+                <div className="feedback-action-row">
+                  <button
+                    type="button"
+                    className="feedback-btn positive"
+                    onClick={() => handleFeedback("correct")}
+                    disabled={!currentImageId || feedbackState.status === "submitting"}
+                  >
+                    {"\u6b63\u786e"}
+                  </button>
+                  <button
+                    type="button"
+                    className="feedback-btn negative"
+                    onClick={() => handleFeedback("wrong")}
+                    disabled={!currentImageId || feedbackState.status === "submitting"}
+                  >
+                    {"\u9519\u8bef"}
+                  </button>
+                </div>
+
+                {feedbackState.mode === "wrong" && feedbackState.status !== "success" && (
+                  <div className="feedback-correction-box">
+                    <label className="feedback-select-field">
+                      <span>{"\u8bf7\u9009\u62e9\u6b63\u786e\u7c7b\u522b"}</span>
+                      <select
+                        value={feedbackState.correctedCategory}
+                        onChange={(event) =>
+                          setFeedbackState((current) => ({
+                            ...current,
+                            correctedCategory: event.target.value,
+                            message: ""
+                          }))
+                        }
+                      >
+                        <option value="">{"\u8bf7\u9009\u62e9"}</option>
+                        {categoryOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="feedback-submit-row">
+                      <button
+                        type="button"
+                        className="feedback-submit-btn"
+                        onClick={handleWrongFeedbackSubmit}
+                        disabled={
+                          feedbackState.status === "submitting" ||
+                          !feedbackState.correctedCategory
+                        }
+                      >
+                        {"\u63d0\u4ea4\u4fee\u6b63\u7c7b\u522b"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {feedbackState.message && (
+                  <div className={`feedback-status ${feedbackState.status}`}>
+                    {feedbackState.message}
+                  </div>
+                )}
+              </div>
               <div className="analysis-footer">
                 <span>来源：{formatSourceLabel(result.source)}</span>
                 <span>模型：{result.model_name}</span>
