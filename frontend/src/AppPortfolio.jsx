@@ -65,6 +65,22 @@ function loadImageElement(file) {
   });
 }
 
+function loadImageElementFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => {
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      reject(new Error("Failed to load preview image."));
+    };
+
+    image.src = url;
+  });
+}
+
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
@@ -135,6 +151,36 @@ async function createHistoryThumbnail(file, options = {}) {
   } = options;
 
   const image = await loadImageElement(file);
+  const scaledSize = getScaledSize(
+    image.naturalWidth,
+    image.naturalHeight,
+    maxDimension
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = scaledSize.width;
+  canvas.height = scaledSize.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return "";
+  }
+
+  context.drawImage(image, 0, 0, scaledSize.width, scaledSize.height);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
+async function createHistoryThumbnailFromUrl(url, options = {}) {
+  if (!url || typeof document === "undefined") {
+    return "";
+  }
+
+  const {
+    maxDimension = HISTORY_THUMBNAIL_DIMENSION,
+    quality = HISTORY_THUMBNAIL_QUALITY
+  } = options;
+
+  const image = await loadImageElementFromUrl(url);
   const scaledSize = getScaledSize(
     image.naturalWidth,
     image.naturalHeight,
@@ -474,6 +520,10 @@ function AppPortfolio() {
   }
 
   function appendHistoryItem(payload, context) {
+    if (!context.previewUrl && typeof console !== "undefined") {
+      console.warn("History thumbnail missing for entry:", context.fileName);
+    }
+
     const entry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       timestamp: new Date().toISOString(),
@@ -569,12 +619,6 @@ function AppPortfolio() {
 
     let historyPreviewUrl = "";
 
-    try {
-      historyPreviewUrl = await createHistoryThumbnail(file);
-    } catch {
-      historyPreviewUrl = "";
-    }
-
     const submitContext = {
       captureSource: sourceLabel,
       fileName: file.name,
@@ -583,8 +627,20 @@ function AppPortfolio() {
 
     try {
       const optimizedFile = await optimizeImageFile(file);
+      try {
+        historyPreviewUrl = await createHistoryThumbnailFromUrl(previewUrl);
+      } catch {
+        historyPreviewUrl = await createHistoryThumbnail(optimizedFile).catch(() => "");
+      }
+      submitContext.previewUrl = historyPreviewUrl;
       await sendFile(optimizedFile, submitContext);
     } catch {
+      try {
+        historyPreviewUrl = await createHistoryThumbnailFromUrl(previewUrl);
+      } catch {
+        historyPreviewUrl = await createHistoryThumbnail(file).catch(() => "");
+      }
+      submitContext.previewUrl = historyPreviewUrl;
       await sendFile(file, submitContext);
     }
   }
